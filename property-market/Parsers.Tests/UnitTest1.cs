@@ -23,10 +23,10 @@ namespace Parsers.Tests
             foreach (var item in providerTestData)
             {
                 await TryCatch(async () => {
-                    var result = await item.Provider.SearchProvider!.FetchPropertySearchResults();
-                    item.Provider.SearchProvider!.ParseSearchResults(result.Source, result.Content);
+                    var result = await item.Provider.SearchProvider!.FetchSearchListings();
+                    item.Provider.SearchProvider!.ParseSearchListings(result.Source, result.Content);
                 }, $"{item.Provider.GetType().Name} Search");
-                await TryCatch(async () => await item.Provider.ListingProvider!.FetchPropertyListingResult("singlelisting"), $"{item.Provider.GetType().Name} Listing");
+                await TryCatch(async () => await item.Provider.ListingProvider!.FetchListing("singlelisting"), $"{item.Provider.GetType().Name} Listing");
             }
 
             async Task TryCatch(Func<Task> act, string exceptionInfo)

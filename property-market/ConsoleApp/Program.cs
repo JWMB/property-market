@@ -41,20 +41,20 @@ string? listingId = "https://www.lansfast.se/till-salu/villa/blekinge/karlshamn/
 ////"https://www.hemnet.se/bostad/lagenhet-2rum-masta-eskilstuna-kommun-tomtebogatan-2a-19640255";
 if (true)
 {
-    var listResult = await provider.SearchProvider!.FetchPropertySearchResults();
+    var listResult = await provider.SearchProvider!.FetchSearchListings();
     WriteFile($"{provider.Id}_list_{DateTime.Now:yyMMdd_HHmm}.dat", listResult.Content);
-    listingId = provider.SearchProvider!.ParseSearchResults(listResult.Source, listResult.Content).FirstOrDefault()?.ListingId;
+    listingId = provider.SearchProvider!.ParseSearchListings(listResult.Source, listResult.Content).FirstOrDefault()?.ListingId;
 }
 //var aa = ((Lansfast)provider).ParsePropertyListings(new Uri("http://a"), ReadFile("Lansfast.dat")); //Hemnet_item_230221_1227.dat
 
 if (false)
 {
-    var itemResult = await provider.ListingProvider!.FetchPropertyListingResult(listingId); // "ObjektpresentationAPI/api/Visning/2804947");
-    WriteFile($"{provider.Id}_item_{DateTime.Now:yyMMdd_HHmm}.dat", itemResult.RawResult);
+    var itemResult = await provider.ListingProvider!.FetchListing(listingId); // "ObjektpresentationAPI/api/Visning/2804947");
+    WriteFile($"{provider.Id}_item_{DateTime.Now:yyMMdd_HHmm}.dat", itemResult.Content);
 }
 
 //((Lansfast)provider).ParsePropertyListing(new Uri("http://a"), File.ReadAllText("Lansfast_item_230222_0739.dat"));
-((Hemnet)provider).ParsePropertyListing(new Uri("http://a"), ReadFile("Lansfast_item_230222_0739.dat"));
+provider.ListingProvider!.ParseListing(new Uri("http://a"), ReadFile("Lansfast_item_230222_0739.dat"));
 
 //var item = await provider.ParseItemPage(File.ReadAllText(@"C:\Users\uzk446\Desktop\fastighetsbyran-object.html"));
 

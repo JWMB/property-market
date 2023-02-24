@@ -16,17 +16,22 @@ namespace Parsers.Providers
 
         public IPropertyListingProvider? ListingProvider => this;
 
-        public /*async*/ Task<IPropertyListingProvider.FetchResult> FetchPropertyListingResult(string objectId)
+        public /*async*/ Task<FetchResult> FetchListing(string objectId)
         {
             throw new NotImplementedException();
         }
 
-        public /*async*/ Task<IPropertyListingSearchProvider.FetchResult> FetchPropertySearchResults(PropertyFilter? filter = null, int skip = 0, int take = 100)
+        public /*async*/ Task<FetchResult> FetchSearchListings(PropertyFilter? filter = null, int skip = 0, int take = 100)
         {
             throw new NotImplementedException();
         }
 
-        public List<PropertyListing> ParseSearchResults(Uri source, string fetched)
+        public PropertyListing ParseListing(Uri source, string fetched)
+        {
+            throw new NotImplementedException();
+        }
+
+        public List<PropertyListing> ParseSearchListings(Uri source, string fetched)
         {
             throw new NotImplementedException();
         }

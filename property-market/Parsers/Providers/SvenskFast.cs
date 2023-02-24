@@ -29,23 +29,23 @@ namespace Parsers.Providers
             this.dataFetcher = dataFetcher;
         }
 
-        public async Task<IPropertyListingSearchProvider.FetchResult> FetchPropertySearchResults(PropertyFilter? filter = null, int skip = 0, int take = 100)
+        public async Task<FetchResult> FetchSearchListings(PropertyFilter? filter = null, int skip = 0, int take = 100)
         {
             var uri = new Uri("https://www.svenskfast.se/bostad/");
             var html = await dataFetcher.Fetch(uri);
 
-            return new IPropertyListingSearchProvider.FetchResult { Content = html, Source = uri }; // ParseSearchResults(uri, html) };
+            return new FetchResult { Content = html, Source = uri }; // ParseSearchResults(uri, html) };
         }
 
-        public async Task<IPropertyListingProvider.FetchResult> FetchPropertyListingResult(string objectId)
+        public async Task<FetchResult> FetchListing(string objectId)
         {
             var uri = DefaultUri.ReplacePathAndQuery(objectId);
             var html = await dataFetcher.Fetch(uri);
             
-            return new IPropertyListingProvider.FetchResult { RawResult = html, Listing = ParseListingPage(uri, html) };
+            return new FetchResult { Content = html, Source = uri };
         }
 
-        public PropertyListing ParseListingPage(Uri source, string html)
+        public PropertyListing ParseListing(Uri source, string html)
         {
             var (doc, head, body) = ParseTools.ParseHtmlWithHeadAndBody(html, source);
 
@@ -138,7 +138,7 @@ namespace Parsers.Providers
             };
         }
 
-        public List<PropertyListing> ParseSearchResults(Uri source, string html)
+        public List<PropertyListing> ParseSearchListings(Uri source, string html)
         {
             var (doc, head, body) = ParseTools.ParseHtmlWithHeadAndBody(html, source);
 

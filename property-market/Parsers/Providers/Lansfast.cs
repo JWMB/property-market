@@ -36,32 +36,32 @@ namespace Parsers.Providers
             this.dataFetcher = dataFetcher;
         }
 
-        public async Task<IPropertyListingProvider.FetchResult> FetchPropertyListingResult(string objectId)
+        public async Task<FetchResult> FetchListing(string objectId)
         {
             var request = new CurlRequest("""curl 'https://www.lansfast.se/till-salu/villa/blekinge/karlshamn/svangsta/nissavagen-11/cmvilla5aba5m3qk4vosdsb/' -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0' -H 'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br' -H 'DNT: 1' -H 'Connection: keep-alive' -H 'Cookie: OptanonConsent=isGpcEnabled=0&datestamp=Tue+Feb+21+2023+16%3A03%3A41+GMT%2B0100+(Central+European+Standard+Time)&version=6.18.0&isIABGlobal=false&hosts=&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1%2CC0004%3A1&geolocation=SE%3BAB&AwaitingReconsent=false; OptanonAlertBoxClosed=2022-12-15T17:34:43.854Z; _gcl_au=1.1.232909006.1671125684; _ga_G36QNJLL2H=GS1.1.1676991215.4.1.1676991821.0.0.0; _ga=GA1.1.2009243595.1671125684; _gcl_aw=GCL.1676728878.Cj0KCQiAi8KfBhCuARIsADp-A54DGM5vOsujRZfHXqemKTgaFar7Plyyep0cEsBCMof0BaHt4AKwqU8aAsMWEALw_wcB' -H 'Upgrade-Insecure-Requests: 1' -H 'Sec-Fetch-Dest: document' -H 'Sec-Fetch-Mode: navigate' -H 'Sec-Fetch-Site: cross-site' -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -H 'TE: trailers'""").HttpRequestMessage;
             request.RequestUri = request.RequestUri!.ReplacePathAndQuery(objectId);
             var html = await dataFetcher.Fetch(request);
 
-            return new IPropertyListingProvider.FetchResult
+            return new FetchResult
             {
-                Listing = ParsePropertyListing(request.RequestUri!, html),
-                RawResult = html
+                Source = request.RequestUri!,
+                Content = html
             };
         }
 
-        public async Task<IPropertyListingSearchProvider.FetchResult> FetchPropertySearchResults(PropertyFilter? filter = null, int skip = 0, int take = 100)
+        public async Task<FetchResult> FetchSearchListings(PropertyFilter? filter = null, int skip = 0, int take = 100)
         {
             var curl = new CurlRequest("""curl 'https://www.lansfast.se/umbraco/api/findestateapi/loadestates?page=1&sortOrder=0' -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0' -H 'Accept: */*' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://www.lansfast.se/till-salu/' -H 'newrelic: eyJ2IjpbMCwxXSwiZCI6eyJ0eSI6IkJyb3dzZXIiLCJhYyI6IjMyNjA5ODciLCJhcCI6IjUyNjU2MjM2OCIsImlkIjoiOTE4ZmFhMWRmNTEzNWQ0YSIsInRyIjoiNjNlYTZiYWNkYTYyYTM4NWQ1ODRkODQ1YmE4NDM3MTUiLCJ0aSI6MTY3Njk5MTQ0MjgwOH19' -H 'traceparent: 00-63ea6bacda62a385d584d845ba843715-918faa1df5135d4a-01' -H 'tracestate: 3260987@nr=0-1-3260987-526562368-918faa1df5135d4a----1676991442808' -H 'DNT: 1' -H 'Connection: keep-alive' -H 'Cookie: OptanonConsent=isGpcEnabled=0&datestamp=Tue+Feb+21+2023+15%3A53%3A35+GMT%2B0100+(Central+European+Standard+Time)&version=6.18.0&isIABGlobal=false&hosts=&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1%2CC0004%3A1&geolocation=SE%3BAB&AwaitingReconsent=false; OptanonAlertBoxClosed=2022-12-15T17:34:43.854Z; _gcl_au=1.1.232909006.1671125684; _ga_G36QNJLL2H=GS1.1.1676991215.4.0.1676991442.0.0.0; _ga=GA1.1.2009243595.1671125684; _gcl_aw=GCL.1676728878.Cj0KCQiAi8KfBhCuARIsADp-A54DGM5vOsujRZfHXqemKTgaFar7Plyyep0cEsBCMof0BaHt4AKwqU8aAsMWEALw_wcB' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-origin' -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -H 'TE: trailers'""");
             var json = await dataFetcher.Fetch(curl);
 
-            return new IPropertyListingSearchProvider.FetchResult
+            return new FetchResult
             {
                 Content = json,
                 Source = curl.Uri //ParseSearchResults(curl.Uri, json)
             };
         }
 
-        public List<PropertyListing> ParseSearchResults(Uri source, string json)
+        public List<PropertyListing> ParseSearchListings(Uri source, string json)
         {
             var items = JObject.Parse(json)["estates"] as JArray;
             if (items == null)
@@ -107,7 +107,7 @@ namespace Parsers.Providers
             return result;
         }
 
-        public PropertyListing ParsePropertyListing(Uri source, string html)
+        public PropertyListing ParseListing(Uri source, string html)
         {
             var (doc, head, body) = ParseTools.ParseHtmlWithHeadAndBody(html, source);
 

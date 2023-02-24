@@ -2,10 +2,15 @@
 
 namespace Crawling
 {
-    public class ListingsRepository
+    public interface IListingsRepository
+    {
+        Task<PropertyListing?> Get(string providerId, string itemId);
+        Task Upsert(PropertyListing listing);
+    }
+
+    public class InMemoryListingsRepository : IListingsRepository
     {
         private Dictionary<string, Dictionary<string, PropertyListing>> retrieved = new();
-
 
         private Dictionary<string, PropertyListing> GetForProvider(string providerId)
         {

@@ -8,14 +8,8 @@ namespace Parsers
         IPropertyDataProvider DataProvider { get; }
 
         // TODO: FilteringCapabilities?
-        Task<FetchResult> FetchPropertySearchResults(PropertyFilter? filter = null, int skip = 0, int take = 100);
+        Task<FetchResult> FetchSearchListings(PropertyFilter? filter = null, int skip = 0, int take = 100);
 
-        List<PropertyListing> ParseSearchResults(Uri source, string fetched);
-
-        public class FetchResult
-        {
-            public required Uri Source { get; set; }
-            public string Content { get; set; }
-        }
+        List<PropertyListing> ParseSearchListings(Uri source, string fetched);
     }
 }

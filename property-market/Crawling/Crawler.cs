@@ -6,7 +6,12 @@ namespace Crawling
     public class Crawler
     {
         private List<IPropertyDataProvider> providers = new List<IPropertyDataProvider>();
-        private ListingsRepository repository = new();
+        private IListingsRepository listingsRepository;
+
+        public Crawler(IListingsRepository listingsRepository)
+        {
+            this.listingsRepository = listingsRepository;
+        }
 
         public async Task CrawlItem(PropertyListing listing)
         {
@@ -21,23 +26,24 @@ namespace Crawling
 
         public async Task CrawlItem(IPropertyListingProvider provider, string listingId)
         {
-            var listing = await provider.FetchPropertyListingResult(listingId);
-            var existing = await repository.Get(provider.DataProvider.Id, listingId);
+            var result = await provider.FetchListing(listingId);
+            var parsed = provider.ParseListing(result.Source, result.Content);
+            var existing = await listingsRepository.Get(provider.DataProvider.Id, listingId);
 
             if (existing != null)
             {
-                if (existing.Compare(listing.Listing) == false)
+                if (existing.Compare(parsed) == false)
                 {
-                    await repository.Upsert(listing.Listing);
+                    await listingsRepository.Upsert(parsed);
                     if (provider.DataProvider.IsAggregator)
                     {
-                        await QueueItemCrawl(listing.Listing);
+                        await QueueItemCrawl(parsed);
                     }
                 }
             }
             else
             {
-                await repository.Upsert(listing.Listing);
+                await listingsRepository.Upsert(parsed);
             }
         }
 
@@ -55,13 +61,13 @@ namespace Crawling
                         continue;
                     var listProvider = item.Provider.SearchProvider;
 
-                    var result = await listProvider.FetchPropertySearchResults(item.Filter);
+                    var result = await listProvider.FetchSearchListings(item.Filter);
 
                     item.LastCrawl = DateTimeOffset.UtcNow;
 
                     await SaveRawResult(item, result.Content);
 
-                    var listings = listProvider.ParseSearchResults(result.Source, result.Content);
+                    var listings = listProvider.ParseSearchListings(result.Source, result.Content);
                     var addedOrUpdated = await GetAddedOrUpdated(listings);
 
                     // TODO: next crawl should be determined by heuristics (how often page seems to contain new info - and depending on time of day, day of week etc)

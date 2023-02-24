@@ -27,34 +27,35 @@ namespace Parsers.Providers
             this.dataFetcher = dataFetcher;
         }
 
-        public async Task<IPropertyListingSearchProvider.FetchResult> FetchPropertySearchResults(PropertyFilter? filter = null, int skip = 0, int take = 100)
+        public async Task<FetchResult> FetchSearchListings(PropertyFilter? filter = null, int skip = 0, int take = 100)
         {
             // https://www.fastighetsbyran.com/sv/sverige/till-salu
             var curl = new CurlRequest("""curl 'https://www.fastighetsbyran.com/HemsidanAPI/api/v1/soek/objekt/1/false/' -X POST -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0' -H 'Accept: application/json' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://www.fastighetsbyran.com/sv/sverige/till-salu' -H 'Content-Type: application/json' -H 'spraak: sv' -H 'webbmarknad: 204' -H 'X-Forwarded-For: 90.143.11.236' -H 'Origin: https://www.fastighetsbyran.com' -H 'DNT: 1' -H 'Connection: keep-alive' -H 'Cookie: FSDANONYMOUS=MBeI5zt52QEkAAAANmFhODEwN2ItODM1ZS00Y2VjLWI5NWYtOTUwYWViODM3NDQ5_PQ14fr2nVHHTAlsarTzYtnBdSY1; CookieConsent={stamp:%27tG2idt5oRPXK2ifI0j4cKPCMnne99GI4lFfpYgG8qPRGpBNeVPBEjw==%27%2Cnecessary:true%2Cpreferences:true%2Cstatistics:false%2Cmarketing:false%2Cmethod:%27explicit%27%2Cver:1%2Cutc:1676645281660%2Cregion:%27se%27}; ForSaleLargeGallery=true' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-origin' -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' --data-raw '{"valdaMaeklarObjektTyper":[],"valdaNyckelord":[],"valdaLaen":[],"valdaKontor":[],"valdaKommuner":[],"valdaNaeromraaden":[],"valdaPostorter":[],"inkluderaNyproduktion":true,"inkluderaPaaGaang":true,"positioner":[]}'""");
             var json = await dataFetcher.Fetch(curl);
 
-            return new IPropertyListingSearchProvider.FetchResult
+            return new FetchResult
             {
                 Content = json,
                 Source = curl.Uri //ParseSearchResults(curl.Uri, json),
             };
         }
 
-        public async Task<IPropertyListingProvider.FetchResult> FetchPropertyListingResult(string objectId)
+        public async Task<FetchResult> FetchListing(string objectId)
         {
             var curl = new CurlRequest("curl 'https://www.fastighetsbyran.com/ObjektpresentationAPI/api/Visning/2804947' -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0' -H 'Accept: application/json' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://www.fastighetsbyran.com/sv/sverige/objekt/?objektid=2804947' -H 'spraak: sv' -H 'webbmarknad: 204' -H 'X-Forwarded-For: 90.143.11.236' -H 'DNT: 1' -H 'Connection: keep-alive' -H 'Cookie: FSDANONYMOUS=MBeI5zt52QEkAAAANmFhODEwN2ItODM1ZS00Y2VjLWI5NWYtOTUwYWViODM3NDQ5_PQ14fr2nVHHTAlsarTzYtnBdSY1; CookieConsent={stamp:%27tG2idt5oRPXK2ifI0j4cKPCMnne99GI4lFfpYgG8qPRGpBNeVPBEjw==%27%2Cnecessary:true%2Cpreferences:true%2Cstatistics:false%2Cmarketing:false%2Cmethod:%27explicit%27%2Cver:1%2Cutc:1676645281660%2Cregion:%27se%27}; ForSaleLargeGallery=true' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-origin' -H 'Pragma: no-cache' -H 'Cache-Control: no-cache'");
             var req = curl.HttpRequestMessage;
             req.RequestUri = req.RequestUri!.ReplacePath(str => str.Replace("2804947", objectId));
             var json = await dataFetcher.Fetch(curl);
 
-            return new IPropertyListingProvider.FetchResult
+            return new FetchResult
             {
-                RawResult = json,
-                Listing = ParseItemPage(curl.Uri, json)
+                Content = json,
+                Source = curl.Uri
+                //Listing = ParseItemPage(curl.Uri, json)
             };
         }
 
-        public List<PropertyListing> ParseSearchResults(Uri source, string json)
+        public List<PropertyListing> ParseSearchListings(Uri source, string json)
         {
             var root = JsonConvert.DeserializeObject<Root>(json);
             if (root == null)
@@ -78,7 +79,7 @@ namespace Parsers.Providers
             }).ToList();
         }
 
-        public PropertyListing ParseItemPage(Uri source, string html)
+        public PropertyListing ParseListing(Uri source, string html)
         {
             var (doc, head, body) = ParseTools.ParseHtmlWithHeadAndBody(html, source);
 

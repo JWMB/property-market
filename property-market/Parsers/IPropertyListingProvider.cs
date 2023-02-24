@@ -6,12 +6,8 @@ namespace Parsers
     {
         IPropertyDataProvider DataProvider { get; }
 
-        Task<FetchResult> FetchPropertyListingResult(string objectId);
+        Task<FetchResult> FetchListing(string objectId);
 
-        public class FetchResult
-        {
-            public required PropertyListing Listing { get; set; }
-            public required string RawResult { get; set; }
-        }
+        PropertyListing ParseListing(Uri source, string fetched);
     }
 }

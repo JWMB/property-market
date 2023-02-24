@@ -19,7 +19,7 @@ namespace Parsers.Providers
 
         public IPropertyDataProvider DataProvider => this;
 
-        public async Task<IPropertyListingSearchProvider.FetchResult> FetchPropertySearchResults(PropertyFilter? filter = null, int skip = 0, int take = 100)
+        public async Task<FetchResult> FetchSearchListings(PropertyFilter? filter = null, int skip = 0, int take = 100)
         {
             var loader = new PlaywrightWebPageLoader();
 
@@ -49,10 +49,10 @@ namespace Parsers.Providers
 
             //var items = ParseSearchResults(uri, loadedHtml);
 
-            return new IPropertyListingSearchProvider.FetchResult { Source = uri, Content = loadedHtml };
+            return new FetchResult { Source = uri, Content = loadedHtml };
         }
 
-        public async Task<IPropertyListingProvider.FetchResult> FetchPropertyListingResult(string objectId)
+        public async Task<FetchResult> FetchListing(string objectId)
         {
             var loader = new PlaywrightWebPageLoader();
 
@@ -62,12 +62,12 @@ namespace Parsers.Providers
                 throw new Exception("");
 
             var html = await response.TextAsync();
-            var parsed = ParseItemPage(uri, html);
+            //var parsed = ParseItemPage(uri, html);
 
-            return new IPropertyListingProvider.FetchResult { Listing = parsed, RawResult = html };
+            return new FetchResult { Source = uri, Content = html };
         }
 
-        public PropertyListing ParseItemPage(Uri source, string html)
+        public PropertyListing ParseListing(Uri source, string html)
         {
             var (doc, head, body) = ParseTools.ParseHtmlWithHeadAndBody(html, source);
             var scripts = body.QuerySelectorAllOrThrow("script");
@@ -195,7 +195,7 @@ namespace Parsers.Providers
              */
         }
 
-        public List<PropertyListing> ParseSearchResults(Uri source, string html)
+        public List<PropertyListing> ParseSearchListings(Uri source, string html)
         {
             var (doc, head, body) = ParseTools.ParseHtmlWithHeadAndBody(html, source);
 
