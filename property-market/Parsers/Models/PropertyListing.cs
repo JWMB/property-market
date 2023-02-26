@@ -17,7 +17,7 @@ namespace Parsers.Models
 
         public List<Bid> Bids { get; set; } = new();
 
-        public required IPropertyListingProvider Provider { get; set; }
+        public required IPropertyDataProvider Provider { get; set; }
         
         public required Uri CrawledFrom { get; set; }
         public Uri? UriWithProvider { get; set; }

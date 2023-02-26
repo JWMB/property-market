@@ -15,8 +15,6 @@ namespace Parsers.Models
 
         public string? EnergyClass { get; set; }
 
-        public Uri? PrimarySource { get; set; }
-
         public DateTimeOffset? DateConstructed { get; set; }
 
         // TODO: Subtype Coop?

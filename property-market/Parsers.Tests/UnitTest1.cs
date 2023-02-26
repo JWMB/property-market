@@ -1,10 +1,61 @@
+using Microsoft.Extensions.DependencyInjection;
 using Parsers.Providers;
 using Shouldly;
+using System.Net;
+using ConsoleApp;
+using Parsers.Models;
 
 namespace Parsers.Tests
 {
     public class UnitTest1
     {
+        [Fact]
+        public async Task FetchTest()
+        {
+            var baseType = typeof(IPropertyDataProvider);
+            var concreteTypes = baseType.Assembly.GetTypes()
+                .Where(baseType.IsAssignableFrom)
+                .Where(o => !o.IsAbstract && !o.IsInterface)
+                .ToList();
+
+            concreteTypes.ShouldNotBeEmpty();
+
+            var serviceCollection = new ServiceCollection();
+            serviceCollection.AddHttpClient(HttpClientDataFetcher.HttpClientName)
+                .SetHandlerLifetime(TimeSpan.FromMinutes(5))
+                .ConfigurePrimaryHttpMessageHandler(x => new HttpClientHandler { AutomaticDecompression = DecompressionMethods.Brotli | DecompressionMethods.GZip | DecompressionMethods.Deflate });
+            serviceCollection.AddSingleton<IDataFetcher, HttpClientDataFetcher>();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            var instances = concreteTypes
+                .Where(o => o.GetConstructor(new[] { typeof(IDataFetcher) }) != null)
+                .Where(o => o != typeof(Template))
+                .Select(serviceProvider.CreateInstance)
+                .OfType<IPropertyDataProvider>()
+                .ToList();
+
+            instances.ShouldNotBeEmpty();
+
+            var errors = new List<string>();
+            var parsed = new List<PropertyListing>();
+            foreach (var instance in instances.Where(o => o.SearchProvider != null))
+            {
+                try
+                {
+                    var fetched = await instance.SearchProvider!.FetchSearchListings();
+                    var result = instance.SearchProvider!.ParseSearchListings(fetched.Source, fetched.Content);
+                    parsed.AddRange(result);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"{instance.Id}: {ex.Message}");
+                }
+            }
+
+            if (errors.Any())
+                throw new Exception(string.Join("\n", errors));
+        }
+
         [Fact]
         public async Task Test1()
         {
@@ -26,7 +77,11 @@ namespace Parsers.Tests
                     var result = await item.Provider.SearchProvider!.FetchSearchListings();
                     item.Provider.SearchProvider!.ParseSearchListings(result.Source, result.Content);
                 }, $"{item.Provider.GetType().Name} Search");
-                await TryCatch(async () => await item.Provider.ListingProvider!.FetchListing("singlelisting"), $"{item.Provider.GetType().Name} Listing");
+
+                await TryCatch(async () =>
+                {
+                    await item.Provider.ListingProvider!.FetchListing("singlelisting");
+                }, $"{item.Provider.GetType().Name} Listing");
             }
 
             async Task TryCatch(Func<Task> act, string exceptionInfo)

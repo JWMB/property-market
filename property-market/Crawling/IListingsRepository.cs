@@ -27,7 +27,7 @@ namespace Crawling
 
         public Task Upsert(PropertyListing listing)
         {
-            var dict = GetForProvider(listing.Provider.DataProvider.Id);
+            var dict = GetForProvider(listing.Provider.Id);
             dict[listing.ListingId] = listing;
             return Task.CompletedTask;
         }

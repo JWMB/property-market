@@ -3,23 +3,31 @@ using Parsers.Models;
 
 namespace Crawling
 {
+
     public class Crawler
     {
-        private List<IPropertyDataProvider> providers = new List<IPropertyDataProvider>();
+        private List<IPropertyDataProvider> providers;
+        private readonly ICrawlQueueSender queueSender;
+        private readonly ICrawlStateRepository crawlStateRepository;
         private IListingsRepository listingsRepository;
+        private IRawDataRepository rawDataRepository;
 
-        public Crawler(IListingsRepository listingsRepository)
+        public Crawler(IRawDataRepository rawDataRepository, ICrawlQueueSender queueSender, ICrawlStateRepository crawlStateRepository, IEnumerable<IPropertyDataProvider> dataProviders, IListingsRepository listingsRepository)
         {
+            providers = dataProviders.ToList();
+            this.rawDataRepository = rawDataRepository;
+            this.queueSender = queueSender;
+            this.crawlStateRepository = crawlStateRepository;
             this.listingsRepository = listingsRepository;
         }
 
         public async Task CrawlItem(PropertyListing listing)
         {
-            var provider = providers.SingleOrDefault(o => o.Id == listing.Provider.DataProvider.Id);
-            if (provider == null) 
-                throw new Exception($"No provider found: {listing.Provider.DataProvider.Id}");
+            var provider = providers.SingleOrDefault(o => o.Id == listing.Provider.Id);
+            if (provider == null)
+                throw new Exception($"No provider found: {listing.Provider.Id}");
             if (provider.ListingProvider == null)
-                throw new Exception($"No itemProvider in {listing.Provider.DataProvider.Id}");
+                throw new Exception($"No itemProvider in {listing.Provider.Id}");
 
             await CrawlItem(provider.ListingProvider, listing.ListingId);
         }
@@ -37,7 +45,7 @@ namespace Crawling
                     await listingsRepository.Upsert(parsed);
                     if (provider.DataProvider.IsAggregator)
                     {
-                        await QueueItemCrawl(parsed);
+                        await queueSender.Send(parsed);
                     }
                 }
             }
@@ -49,70 +57,57 @@ namespace Crawling
 
         public async Task CrawlLists()
         {
-            var listProviders = new List<ListCrawlInfo>();
+            var states = crawlStateRepository.SearchCrawlStates;
 
-            while (true)
+            var toCrawl = states.Where(o => o.NextCrawl <= DateTimeOffset.UtcNow);
+
+            foreach (var item in toCrawl)
             {
-                var toCrawl = listProviders.Where(o => o.NextCrawl >= DateTimeOffset.UtcNow);
+                if (item.Provider?.SearchProvider == null)
+                    continue;
+                var listProvider = item.Provider.SearchProvider;
 
-                foreach (var item in toCrawl)
+                var result = await listProvider.FetchSearchListings(item.Filter);
+
+                item.LastCrawl = DateTimeOffset.UtcNow;
+
+                await rawDataRepository.Add(item.Provider, result.Content);
+
+                var listings = listProvider.ParseSearchListings(result.Source, result.Content);
+                var addedOrUpdated = await GetAddedOrUpdated(listings);
+
+                // TODO: next crawl should be determined by heuristics (how often page seems to contain new info - and depending on time of day, day of week etc)
+                item.NextCrawl = DateTimeOffset.UtcNow.Add(addedOrUpdated.Any() ? TimeSpan.FromHours(1) : TimeSpan.FromMinutes(5));
+                if (addedOrUpdated.Any())
                 {
-                    if (item.Provider?.SearchProvider == null)
-                        continue;
-                    var listProvider = item.Provider.SearchProvider;
-
-                    var result = await listProvider.FetchSearchListings(item.Filter);
-
-                    item.LastCrawl = DateTimeOffset.UtcNow;
-
-                    await SaveRawResult(item, result.Content);
-
-                    var listings = listProvider.ParseSearchListings(result.Source, result.Content);
-                    var addedOrUpdated = await GetAddedOrUpdated(listings);
-
-                    // TODO: next crawl should be determined by heuristics (how often page seems to contain new info - and depending on time of day, day of week etc)
-                    item.NextCrawl = DateTimeOffset.UtcNow.Add(addedOrUpdated.Any() ? TimeSpan.FromHours(1) : TimeSpan.FromMinutes(5));
-                    if (addedOrUpdated.Any())
+                    foreach (var xx in addedOrUpdated)
                     {
-                        foreach (var xx in addedOrUpdated)
-                        {
-                            await QueueItemCrawl(xx);
-                        }
+                        await queueSender.Send(xx);
                     }
                 }
-
-                await Task.Delay(1000);
             }
         }
 
-        private Task QueueItemCrawl(PropertyListing listing)
+        private async Task<IEnumerable<PropertyListing>> GetAddedOrUpdated(IEnumerable<PropertyListing> listings)
         {
-            // Always crawl from realtor's page if it exists
-            var uri = listing.RealtorListingPage ?? listing.UriWithProvider; //Provider.DataProvider.IsAggregator
-            // TODO: also check if we have a working parser for that realtor!
-
-            // TODO:
-            return Task.CompletedTask;
-        }
-
-        private Task<IEnumerable<PropertyListing>> GetAddedOrUpdated(IEnumerable<PropertyListing> listings)
-        {
-            // TODO: !
-            return Task.FromResult((IEnumerable<PropertyListing>)new List<PropertyListing>());
-        }
-
-        private Task SaveRawResult(ListCrawlInfo crawlInfo, string rawResult)
-        {
-            // TODO: !
-            return Task.CompletedTask;
-        }
-
-        class ListCrawlInfo
-        {
-            public IPropertyDataProvider? Provider { get; set; }
-            public PropertyFilter? Filter { get; set; }
-            public DateTimeOffset? LastCrawl { get; set; }
-            public DateTimeOffset? NextCrawl { get; set; }
+            var result = new List<PropertyListing>();
+            foreach (var item in listings)
+            {
+                var existing = await listingsRepository.Get(item.Provider.Id, item.ListingId);
+                if (existing != null)
+                {
+                    if (!existing.Compare(item))
+                    {
+                        await listingsRepository.Upsert(item);
+                        result.Add(item);
+                    }
+                }
+                else
+                {
+                    result.Add(item);
+                }
+            }
+            return result;
         }
     }
 }

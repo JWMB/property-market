@@ -4,8 +4,12 @@ namespace Parsers.Providers
 {
     public class Template : IPropertyDataProvider, IPropertyListingSearchProvider, IPropertyListingProvider
     {
-        public Uri DefaultUri => new Uri("https://something");
+        private readonly IDataFetcher dataFetcher;
 
+        //    // https://www.notar.se/kopa-bostad?sortBy=date&sortOrder=desc
+
+        public Uri DefaultUri => new Uri("https://www.notar.se");
+        
         public IPropertyDataProvider DataProvider => this;
 
         public string Id => nameof(Template);
@@ -15,6 +19,11 @@ namespace Parsers.Providers
         public IPropertyListingSearchProvider? SearchProvider => this;
 
         public IPropertyListingProvider? ListingProvider => this;
+
+        public Template(IDataFetcher dataFetcher)
+        {
+            this.dataFetcher = dataFetcher;
+        }
 
         public /*async*/ Task<FetchResult> FetchListing(string objectId)
         {

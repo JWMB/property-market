@@ -1,6 +1,6 @@
 ﻿using ConsoleApp;
+using Crawling;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Primitives;
 using Microsoft.Playwright;
 using Parsers;
 using Parsers.Providers;
@@ -13,7 +13,7 @@ using System.Net;
 
 var serviceCollection = new ServiceCollection();
 serviceCollection.AddHttpClient();
-serviceCollection.AddHttpClient("Default")
+serviceCollection.AddHttpClient(HttpClientDataFetcher.HttpClientName)
     .ConfigureHttpClient((sp, httpClient) =>
     {
         //httpClient.BaseAddress = options.Url;
@@ -26,15 +26,21 @@ serviceCollection.AddHttpClient("Default")
 
 serviceCollection.AddSingleton<IDataFetcher, HttpClientDataFetcher>();
 
-var serviceProvider = serviceCollection.BuildServiceProvider();
-var httpClientFactory = serviceProvider.GetRequiredService<IHttpClientFactory>();
-
-
 var storagePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "property-market");
+
+serviceCollection.AddSingleton<IRawDataRepository>(sp => new FileSystemRawDataRepository(folderPath: Path.Combine(storagePath, "Fetched")));
+serviceCollection.AddSingleton<ICrawlQueueSender, InMemoryCrawlQueue>();
+serviceCollection.AddSingleton<IListingsRepository, InMemoryListingsRepository>();
+serviceCollection.AddSingleton<ICrawlStateRepository, InMemoryCrawlStateRepository>();
+
+var serviceProvider = serviceCollection.BuildServiceProvider();
+
+var crawler = serviceProvider.CreateInstance<Crawler>();
+
 
 IPropertyDataProvider provider;
 
-provider = serviceProvider.CreateInstance<Fastighetsbyran>(); // Lansfast Hemnet Fastighetsbyran
+provider = serviceProvider.CreateInstance<Notar>(); // Lansfast Hemnet Fastighetsbyran
 
 //var aa = ((Hemnet)provider).ParseListingsPage(new Uri("http://a"), File.ReadAllText("Hemnet_list_230221_0854.dat"));
 string? listingId = "https://www.lansfast.se/till-salu/villa/blekinge/karlshamn/svangsta/nissavagen-11/cmvilla5aba5m3qk4vosdsb/"; 
@@ -45,7 +51,6 @@ if (true)
     WriteFile($"{provider.Id}_list_{DateTime.Now:yyMMdd_HHmm}.dat", listResult.Content);
     listingId = provider.SearchProvider!.ParseSearchListings(listResult.Source, listResult.Content).FirstOrDefault()?.ListingId;
 }
-//var aa = ((Lansfast)provider).ParsePropertyListings(new Uri("http://a"), ReadFile("Lansfast.dat")); //Hemnet_item_230221_1227.dat
 
 if (false)
 {
@@ -53,12 +58,9 @@ if (false)
     WriteFile($"{provider.Id}_item_{DateTime.Now:yyMMdd_HHmm}.dat", itemResult.Content);
 }
 
-//((Lansfast)provider).ParsePropertyListing(new Uri("http://a"), File.ReadAllText("Lansfast_item_230222_0739.dat"));
-provider.ListingProvider!.ParseListing(new Uri("http://a"), ReadFile("Lansfast_item_230222_0739.dat"));
+//provider.ListingProvider!.ParseListing(new Uri("http://a"), ReadFile("Lansfast_item_230222_0739.dat"));
 
 //var item = await provider.ParseItemPage(File.ReadAllText(@"C:\Users\uzk446\Desktop\fastighetsbyran-object.html"));
-
-//var provider = new SvenskFast(httpClientFactory);
 //var item = await provider.ParseListingPage(File.ReadAllText(@"C:\Users\uzk446\Desktop\svenskfastList.html"));
 //var html = await provider.LoadItemPage(new Uri("https://www.svenskfast.se/bostadsratt/stockholm/nacka/nacka/sicklaon/saltsjoqvarn/ostra-finnbodavagen-13b/355940"));
 //var html = await provider.LoadItemPage(new Uri("https://www.svenskfast.se/fritidshus/vastra-gotaland/tanum/havstenssund/havstenssund/clasegrand-3/363219"));
