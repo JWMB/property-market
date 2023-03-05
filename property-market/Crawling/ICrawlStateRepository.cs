@@ -7,6 +7,19 @@ namespace Crawling
     {
         Task<IEnumerable<ProviderSeachCrawlState>> GetSearchCrawlStates();
         Task<ProviderSeachCrawlState?> GetSearchCrawlState(IPropertyDataProvider provider);
+        Task SetSearchCrawlState(IPropertyDataProvider provider, ProviderSeachCrawlState state);
+
+        public async Task<ProviderSeachCrawlState> GetOrCreateSearchCrawlState(IPropertyDataProvider provider)
+        {
+            var state = await GetSearchCrawlState(provider);
+            if (state == null)
+            {
+                state = new ProviderSeachCrawlState { Provider = provider };
+                await SetSearchCrawlState(provider, state);
+            }
+            return state;
+        }
+
     }
 
     public class InMemoryCrawlStateRepository : ICrawlStateRepository
@@ -18,6 +31,11 @@ namespace Crawling
 
         public Task<IEnumerable<ProviderSeachCrawlState>> GetSearchCrawlStates() =>
             Task.FromResult((IEnumerable<ProviderSeachCrawlState>)States);
+
+        public Task SetSearchCrawlState(IPropertyDataProvider provider, ProviderSeachCrawlState state)
+        {
+            return Task.CompletedTask;
+        }
     }
 
     public class ProviderSeachCrawlState

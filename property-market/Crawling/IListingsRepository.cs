@@ -6,6 +6,11 @@ namespace Crawling
     {
         Task<PropertyListing?> Get(string providerId, string itemId);
         Task Upsert(PropertyListing listing);
+        /// <summary>
+        /// Listings that are still open (i.e. not yet sold)
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<PropertyListing>> GetOpenListings();
     }
 
     public class InMemoryListingsRepository : IListingsRepository
@@ -30,6 +35,11 @@ namespace Crawling
             var dict = GetForProvider(listing.Provider.Id);
             dict[listing.ListingId] = listing;
             return Task.CompletedTask;
+        }
+
+        public Task<IEnumerable<PropertyListing>> GetOpenListings()
+        {
+            return Task.FromResult(retrieved.SelectMany(o => o.Value.Values).Where(o => o.Removed == null));
         }
     }
 }

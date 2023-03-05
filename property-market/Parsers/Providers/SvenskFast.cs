@@ -153,13 +153,11 @@ namespace Parsers.Providers
             var withInfo = items.Select(o => new { Article = o, Info = o.QuerySelector(".search-hit__info--text")?.Children.Select(o => o.Text()) }).ToList();
 
             if (withInfo.Count(o => o.Info == null) == 0)
-            {
                 throw new Exception($"No info found");
-            }
 
             var result = withInfo.Where(o => o.Info != null).Select(o =>
             {
-                var info = o.Info!; // o.QuerySelectorOrThrow(".search-hit__info--text").Children.Select(o => o.Text());
+                var info = o.Info!;
                 return new PropertyListing
                 {
                     ListingId = o.Article.Href,

@@ -66,10 +66,12 @@ namespace Crawling
             var listings = searchProvider.ParseSearchListings(result.Source, result.Content);
             var addedOrUpdated = await GetAddedOrUpdated(listings);
 
-            var state = await crawlStateRepository.GetSearchCrawlState(searchProvider.DataProvider);
+            var state = await crawlStateRepository.GetOrCreateSearchCrawlState(searchProvider.DataProvider);
             state.LastCrawl = DateTimeOffset.UtcNow;
             // TODO: next crawl should be determined by heuristics (how often page seems to contain new info - and depending on time of day, day of week etc)
             state.NextCrawl = DateTimeOffset.UtcNow.Add(addedOrUpdated.Any() ? TimeSpan.FromHours(1) : TimeSpan.FromMinutes(5));
+
+            await crawlStateRepository.SetSearchCrawlState(searchProvider.DataProvider, state);
 
             if (addedOrUpdated.Any())
             {
@@ -91,6 +93,21 @@ namespace Crawling
 
             foreach (var item in toCrawl.Where(o => o.SearchProvider != null))
                 await PerformSearch(item.SearchProvider!, item.Filter);
+        }
+
+        public async Task QueueOpenListings()
+        {
+            var openListings = await listingsRepository.GetOpenListings();
+
+            // TODO: with a simple queue, we could get unnecessary duplicates
+            // Use a table instead? Or should this logic/re-adding be done just after the listing has been scanned?
+            // Or have a marker on the item - DateTimeOffset AddedToQueue - that we can check?
+
+            // Scan those that have bids quite often (every hour?)
+            foreach (var item in openListings.Where(o => o.Bids.Any()))
+                ;
+            // Scan those that don't have bids once a day
+            //foreach (var item in openListings.Where(o => o.Bids.Any()))
         }
 
         private async Task<IEnumerable<PropertyListing>> GetAddedOrUpdated(IEnumerable<PropertyListing> listings)

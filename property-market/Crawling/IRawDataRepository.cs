@@ -18,7 +18,10 @@ namespace Crawling
 
         public async Task Add(IPropertyDataProvider provider, string content)
         {
-            var filename = "";
+            var filename = $"{provider.Id}_{DateTimeOffset.UtcNow:yyMMdd_HHmm}.txt";
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
             await File.WriteAllTextAsync(Path.Combine(folderPath, filename), content);
         }
     }

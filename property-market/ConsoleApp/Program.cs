@@ -1,7 +1,6 @@
 ﻿using ConsoleApp;
 using Crawling;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Playwright;
 using Parsers;
 using Parsers.Providers;
 using System.Net;
@@ -32,6 +31,7 @@ serviceCollection.AddSingleton<IRawDataRepository>(sp => new FileSystemRawDataRe
 serviceCollection.AddSingleton<ICrawlQueueSender, InMemoryCrawlQueue>();
 serviceCollection.AddSingleton<IListingsRepository, InMemoryListingsRepository>();
 serviceCollection.AddSingleton<ICrawlStateRepository, InMemoryCrawlStateRepository>();
+serviceCollection.AddSingleton<IEnumerable<IPropertyDataProvider>>(sp => new[] { sp.CreateInstance<Hemnet>() });
 
 var serviceProvider = serviceCollection.BuildServiceProvider();
 
@@ -41,6 +41,7 @@ var until = DateTimeOffset.UtcNow.Add(TimeSpan.FromMinutes(10));
 while (DateTimeOffset.UtcNow < until)
 {
     await crawler.PerformDueSearches();
+    await crawler.QueueOpenListings();
     await Task.Delay(1000);
 }
 //await Test();
@@ -48,7 +49,6 @@ while (DateTimeOffset.UtcNow < until)
 
 async Task Test()
 {
-
     IPropertyDataProvider provider;
 
     provider = serviceProvider.CreateInstance<Notar>(); // Lansfast Hemnet Fastighetsbyran
