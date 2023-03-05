@@ -41,7 +41,10 @@ namespace Parsers.Providers
                     HandleText = txt => { Console.WriteLine($"asd {txt}"); }
                 }
             };
-            var uri = new Uri("https://www.booli.se/sverige/77104");
+            // Stockholms kommun: /stockholm/1
+            // Sverige /sverige/77104
+
+            var uri = new Uri("https://www.booli.se/" + "stockholm/1");
             await loader.Load(uri, filters);
 
             if (loadedHtml == null)

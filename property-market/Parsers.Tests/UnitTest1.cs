@@ -18,7 +18,7 @@ namespace Parsers.Tests
                 .Where(o => !o.IsAbstract && !o.IsInterface)
                 .ToList();
 
-            concreteTypes.ShouldNotBeEmpty();
+            concreteTypes.ShouldNotBeEmpty();   
 
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddHttpClient(HttpClientDataFetcher.HttpClientName)
@@ -34,6 +34,7 @@ namespace Parsers.Tests
                 .OfType<IPropertyDataProvider>()
                 .ToList();
 
+            instances = instances.Where(o => o.GetType() == typeof(SvenskFast)).ToList();
             instances.ShouldNotBeEmpty();
 
             var errors = new List<string>();

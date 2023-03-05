@@ -30,10 +30,12 @@ namespace Parsers.Models
 
         public override string ToString() => $"{NumRooms}/{LivingArea}m² {Address}";
 
-        public bool Compare(Property other)
+        public override bool Equals(object? other)
         {
+            if (other == null || other is Property typed == false)
+                return false;
             var compareLogic = new CompareLogic();
-            var result = compareLogic.Compare(this, other);
+            var result = compareLogic.Compare(this, typed);
             return result.AreEqual;
         }
     }

@@ -29,7 +29,7 @@ namespace Crawling.Tests
 
             var crawler = new Crawler(A.Fake<IRawDataRepository>(), queue, stateRepo, providers, new InMemoryListingsRepository());
 
-            await crawler.CrawlLists();
+            await crawler.PerformDueSearches();
 
             (await queue.ApproximateMessageCount).ShouldBe(1);
 

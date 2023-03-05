@@ -1,4 +1,6 @@
-﻿using System.Text.RegularExpressions;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 namespace Parsers
 {
@@ -54,6 +56,18 @@ namespace Parsers
             var body = mBody.Success ? mBody.Groups[1].Value : null;
 
             return result.SetRequestProperties(headers, body);
+        }
+
+        public T? GetBody<T>()
+        {
+            if (httpRequestMessage.Content == null)
+                return default;
+            var content = httpRequestMessage.Content.ReadAsStringAsync().Result;
+            return JsonConvert.DeserializeObject<T>(content);
+        }
+        public void SetBody(object? obj)
+        {
+            httpRequestMessage.Content = obj == null ? null : new StringContent(JsonConvert.SerializeObject(obj));
         }
 
         public HttpRequestMessage HttpRequestMessage => httpRequestMessage;

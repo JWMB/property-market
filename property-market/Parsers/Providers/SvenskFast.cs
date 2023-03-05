@@ -31,7 +31,11 @@ namespace Parsers.Providers
 
         public async Task<FetchResult> FetchSearchListings(PropertyFilter? filter = null, int skip = 0, int take = 100)
         {
-            var uri = new Uri("https://www.svenskfast.se/bostad/");
+            // Stockholm (län) /stockholm/
+            // Stockholm (kommun) /stockholm/stockholm/
+            // Stockholm (ort) /stockholm/stockholm/stockholm/
+            // Stockholms innerstad (Storområde)  /stockholm/stockholms-innerstad/
+            var uri = new Uri("https://www.svenskfast.se/bostad/" + "stockholm/stockholm");
             var html = await dataFetcher.Fetch(uri);
 
             return new FetchResult { Content = html, Source = uri }; // ParseSearchResults(uri, html) };
@@ -146,19 +150,22 @@ namespace Parsers.Providers
                 .Select(o => o.ParentElement)
                 .OfType<IHtmlAnchorElement>(); //IElement
 
-            var result = items.Select(o =>
-            {
-                //var parent = o.ParentElement as IHtmlAnchorElement;
-                //if (parent == null)
-                //    throw new Exception($"No anchor found");
+            var withInfo = items.Select(o => new { Article = o, Info = o.QuerySelector(".search-hit__info--text")?.Children.Select(o => o.Text()) }).ToList();
 
-                var info = o.QuerySelectorOrThrow(".search-hit__info--text").Children.Select(o => o.Text());
+            if (withInfo.Count(o => o.Info == null) == 0)
+            {
+                throw new Exception($"No info found");
+            }
+
+            var result = withInfo.Where(o => o.Info != null).Select(o =>
+            {
+                var info = o.Info!; // o.QuerySelectorOrThrow(".search-hit__info--text").Children.Select(o => o.Text());
                 return new PropertyListing
                 {
-                    ListingId = o.Href,
+                    ListingId = o.Article.Href,
                     Provider = this,
                     CrawledFrom = source,
-                    RealtorListingPage = DefaultUri.ReplacePathAndQuery(o.GetAttributeOrThrow("href")),
+                    RealtorListingPage = DefaultUri.ReplacePathAndQuery(o.Article.GetAttributeOrThrow("href")),
 
                     Property = new Property
                     {

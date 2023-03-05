@@ -32,10 +32,12 @@ namespace Parsers.Models
             return $"{Property} {Price}";
         }
 
-        public bool Compare(PropertyListing other)
+        public override bool Equals(object? other)
         {
+            if (other == null || other is PropertyListing typed == false)
+                return false;
             var compareLogic = new CompareLogic();
-            var result = compareLogic.Compare(this, other);
+            var result = compareLogic.Compare(this, typed);
             return result.AreEqual;
         }
     }

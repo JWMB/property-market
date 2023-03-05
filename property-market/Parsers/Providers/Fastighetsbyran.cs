@@ -33,6 +33,11 @@ namespace Parsers.Providers
             var curl = new CurlRequest("""curl 'https://www.fastighetsbyran.com/HemsidanAPI/api/v1/soek/objekt/1/false/' -X POST -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0' -H 'Accept: application/json' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://www.fastighetsbyran.com/sv/sverige/till-salu' -H 'Content-Type: application/json' -H 'spraak: sv' -H 'webbmarknad: 204' -H 'X-Forwarded-For: 90.143.11.236' -H 'Origin: https://www.fastighetsbyran.com' -H 'DNT: 1' -H 'Connection: keep-alive' -H 'Cookie: FSDANONYMOUS=MBeI5zt52QEkAAAANmFhODEwN2ItODM1ZS00Y2VjLWI5NWYtOTUwYWViODM3NDQ5_PQ14fr2nVHHTAlsarTzYtnBdSY1; CookieConsent={stamp:%27tG2idt5oRPXK2ifI0j4cKPCMnne99GI4lFfpYgG8qPRGpBNeVPBEjw==%27%2Cnecessary:true%2Cpreferences:true%2Cstatistics:false%2Cmarketing:false%2Cmethod:%27explicit%27%2Cver:1%2Cutc:1676645281660%2Cregion:%27se%27}; ForSaleLargeGallery=true' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-origin' -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' --data-raw '{"valdaMaeklarObjektTyper":[],"valdaNyckelord":[],"valdaLaen":[],"valdaKontor":[],"valdaKommuner":[],"valdaNaeromraaden":[],"valdaPostorter":[],"inkluderaNyproduktion":true,"inkluderaPaaGaang":true,"positioner":[]}'""");
             var json = await dataFetcher.Fetch(curl);
 
+            var city = 307; //Stockholm
+            var body = curl.GetBody<dynamic>();
+            body!.valdaKommuner = city.ToString();
+            curl.SetBody(body!);
+
             return new FetchResult
             {
                 Content = json,

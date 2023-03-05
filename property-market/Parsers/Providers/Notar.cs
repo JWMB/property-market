@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json;
 using Parsers.Models;
-using static Parsers.Providers.Notar;
 
 namespace Parsers.Providers
 {
@@ -8,11 +7,11 @@ namespace Parsers.Providers
     {
         private readonly IDataFetcher dataFetcher;
 
-        public Uri DefaultUri => new Uri("https://something");
+        public Uri DefaultUri => new Uri("https://www.notar.se");
 
         public IPropertyDataProvider DataProvider => this;
 
-        public string Id => nameof(Template);
+        public string Id => nameof(Notar);
 
         public bool IsAggregator => false;
 
@@ -33,7 +32,8 @@ namespace Parsers.Providers
 
         public async Task<FetchResult> FetchSearchListings(PropertyFilter? filter = null, int skip = 0, int take = 100)
         {
-            var curl = new CurlRequest("""curl 'https://data.notar.se/objects?limit=24&sortBy=date&sortOrder=desc&assignmentStatus=Kommande&assignmentStatus=Till%20salu&assignmentStatus=P%C3%A5g%C3%A5ende' -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0' -H 'Accept: application/json, text/plain, */*' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://www.notar.se/' -H 'authorization: Basic bm90YXI6OWd6ekRmRGZCVXpjMjJleVhqUG53bU5m' -H 'Origin: https://www.notar.se' -H 'DNT: 1' -H 'Connection: keep-alive' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-site' -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -H 'TE: trailers'""");
+            var area = "CMKOMMUN2H0Q0FNEB6EQBLEG"; // Stockholms kommun
+            var curl = new CurlRequest($"""curl 'https://data.notar.se/objects?limit=24&sortBy=date&sortOrder=desc&assignmentStatus=Kommande&assignmentStatus=Till%20salu&assignmentStatus=P%C3%A5g%C3%A5ende&areaId={area}' -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/110.0' -H 'Accept: application/json, text/plain, */*' -H 'Accept-Language: en-US,en;q=0.5' -H 'Accept-Encoding: gzip, deflate, br' -H 'Referer: https://www.notar.se/' -H 'authorization: Basic bm90YXI6OWd6ekRmRGZCVXpjMjJleVhqUG53bU5m' -H 'Origin: https://www.notar.se' -H 'DNT: 1' -H 'Connection: keep-alive' -H 'Sec-Fetch-Dest: empty' -H 'Sec-Fetch-Mode: cors' -H 'Sec-Fetch-Site: same-site' -H 'Pragma: no-cache' -H 'Cache-Control: no-cache' -H 'TE: trailers'""");
             var result = await dataFetcher.Fetch(curl);
             if (result == null) throw new Exception($"Failed {curl.Uri}");
             return new FetchResult { Content = result, Source = curl.Uri };
@@ -68,8 +68,8 @@ namespace Parsers.Providers
 
                     Property = new Property
                     {
-                        NumRooms = item.numberOfRooms,
-                        LivingArea = (decimal)item.livingSpaceArea,
+                        NumRooms = item.numberOfRooms, //ParseTools.ParseNumber(item.numberOfRooms),
+                        LivingArea = item.livingSpaceArea, //ParseTools.ParseNumber(item.livingSpaceArea),
 
                         Address = new Address
                         {
@@ -219,7 +219,7 @@ namespace Parsers.Providers
 
         public class Interior
         {
-            public int numberOfRooms { get; set; }
+            public decimal numberOfRooms { get; set; }
             public string kitchenType { get; set; }
             public string description { get; set; }
             public List<Room> rooms { get; set; }
@@ -235,7 +235,7 @@ namespace Parsers.Providers
 
         public class LivingSpaceArea
         {
-            public double livingSpaceArea { get; set; }
+            public decimal livingSpaceArea { get; set; }
             public string areaSource { get; set; }
             public string areaSourceComment { get; set; }
         }
@@ -334,7 +334,7 @@ namespace Parsers.Providers
             public string area { get; set; }
             public string municipality { get; set; }
             public LivingSpaceArea livingSpaceArea { get; set; }
-            public int numberOfRooms { get; set; }
+            public decimal numberOfRooms { get; set; }
             public string kitchenType { get; set; }
             public TvAndBroadband tvAndBroadband { get; set; }
             public Tax tax { get; set; }
@@ -404,8 +404,8 @@ namespace Parsers.Providers
             public double longitude { get; set; }
             public double latitude { get; set; }
             public string countryCode { get; set; }
-            public double livingSpaceArea { get; set; }
-            public int numberOfRooms { get; set; }
+            public decimal livingSpaceArea { get; set; } // decimal
+            public decimal numberOfRooms { get; set; } // decimal
             public string assignmentStatus { get; set; }
             public List<object> marketingMethods { get; set; }
             public bool active { get; set; }

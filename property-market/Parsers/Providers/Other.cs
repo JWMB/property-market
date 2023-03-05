@@ -1,4 +1,6 @@
-﻿namespace Parsers.Providers
+﻿using Parsers.Models;
+
+namespace Parsers.Providers
 {
     public class HusmanHagberg
     {

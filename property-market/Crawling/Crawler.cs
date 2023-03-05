@@ -3,7 +3,6 @@ using Parsers.Models;
 
 namespace Crawling
 {
-
     public class Crawler
     {
         private List<IPropertyDataProvider> providers;
@@ -40,7 +39,7 @@ namespace Crawling
 
             if (existing != null)
             {
-                if (existing.Compare(parsed) == false)
+                if (existing.Equals(parsed) == false)
                 {
                     await listingsRepository.Upsert(parsed);
                     if (provider.DataProvider.IsAggregator)
@@ -55,37 +54,43 @@ namespace Crawling
             }
         }
 
-        public async Task CrawlLists()
+        public async Task PerformSearch(IPropertyListingSearchProvider searchProvider, PropertyFilter? filter = null) //ProviderSeachCrawlState state)
         {
-            var states = crawlStateRepository.SearchCrawlStates;
+            //if (state.Provider?.SearchProvider == null)
+            //    return;
 
-            var toCrawl = states.Where(o => o.NextCrawl <= DateTimeOffset.UtcNow);
+            var result = await searchProvider.FetchSearchListings(filter);
 
-            foreach (var item in toCrawl)
+            await rawDataRepository.Add(searchProvider.DataProvider, result.Content);
+
+            var listings = searchProvider.ParseSearchListings(result.Source, result.Content);
+            var addedOrUpdated = await GetAddedOrUpdated(listings);
+
+            var state = await crawlStateRepository.GetSearchCrawlState(searchProvider.DataProvider);
+            state.LastCrawl = DateTimeOffset.UtcNow;
+            // TODO: next crawl should be determined by heuristics (how often page seems to contain new info - and depending on time of day, day of week etc)
+            state.NextCrawl = DateTimeOffset.UtcNow.Add(addedOrUpdated.Any() ? TimeSpan.FromHours(1) : TimeSpan.FromMinutes(5));
+
+            if (addedOrUpdated.Any())
             {
-                if (item.Provider?.SearchProvider == null)
-                    continue;
-                var listProvider = item.Provider.SearchProvider;
-
-                var result = await listProvider.FetchSearchListings(item.Filter);
-
-                item.LastCrawl = DateTimeOffset.UtcNow;
-
-                await rawDataRepository.Add(item.Provider, result.Content);
-
-                var listings = listProvider.ParseSearchListings(result.Source, result.Content);
-                var addedOrUpdated = await GetAddedOrUpdated(listings);
-
-                // TODO: next crawl should be determined by heuristics (how often page seems to contain new info - and depending on time of day, day of week etc)
-                item.NextCrawl = DateTimeOffset.UtcNow.Add(addedOrUpdated.Any() ? TimeSpan.FromHours(1) : TimeSpan.FromMinutes(5));
-                if (addedOrUpdated.Any())
+                foreach (var item in addedOrUpdated)
                 {
-                    foreach (var xx in addedOrUpdated)
-                    {
-                        await queueSender.Send(xx);
-                    }
+                    await queueSender.Send(item);
                 }
             }
+        }
+
+        public async Task PerformDueSearches()
+        {
+            var states = await crawlStateRepository.GetSearchCrawlStates();
+
+            var toCrawl = states.Where(o => o.NextCrawl <= DateTimeOffset.UtcNow)
+                .Select(o => new { o.Provider.SearchProvider, o.Filter })
+                .Concat(providers.Except(states.Select(o => o.Provider))
+                    .Select(o => new { o.SearchProvider, Filter = (PropertyFilter?)null }));
+
+            foreach (var item in toCrawl.Where(o => o.SearchProvider != null))
+                await PerformSearch(item.SearchProvider!, item.Filter);
         }
 
         private async Task<IEnumerable<PropertyListing>> GetAddedOrUpdated(IEnumerable<PropertyListing> listings)
@@ -96,7 +101,7 @@ namespace Crawling
                 var existing = await listingsRepository.Get(item.Provider.Id, item.ListingId);
                 if (existing != null)
                 {
-                    if (!existing.Compare(item))
+                    if (!existing.Equals(item))
                     {
                         await listingsRepository.Upsert(item);
                         result.Add(item);

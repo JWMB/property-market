@@ -9,5 +9,8 @@
 
         IPropertyListingSearchProvider? SearchProvider { get; }
         IPropertyListingProvider? ListingProvider { get; }
+
+        public int GetHashCode() => Id.GetHashCode();
+        public bool Equals(IPropertyDataProvider other) => Id == other.Id;
     }
 }
